@@ -14,7 +14,7 @@ const PORT = process.env.SERVER_PORT || 4242;
 
 
 app.get("/", (req, res) => {
-    res.status(200).json({ message: "Hello, my API works 🚀 v1.0.10" });
+    res.status(200).json({ message: "Hello, my API works 🚀 v1.0.11" });
 });
 
 app.get("/users", (req, res) => {
