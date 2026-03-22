@@ -525,10 +525,8 @@ app.delete("/tarefas/:id", authenticateToken, async (req, res) => {
   }
 });
 
-if (process.env.NODE_ENV !== "production"){
-  app.listen(PORT, () => {
-    console.log(`Servidor a correr em http://localhost:${PORT}`);
-  });
-}
+app.listen(PORT, () => {
+  console.log(`Servidor a correr na porta ${PORT}`);
+});
 
 module.exports = app;
