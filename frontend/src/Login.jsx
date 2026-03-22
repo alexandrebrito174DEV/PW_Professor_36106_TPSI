@@ -15,7 +15,7 @@ function Login() {
     }
 
     try {
-      const resposta = await fetch("http://localhost:4242/auth/signin", {
+      const resposta = await fetch("https://pw-professor-36106-tpsi.onrender.com/auth/signin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

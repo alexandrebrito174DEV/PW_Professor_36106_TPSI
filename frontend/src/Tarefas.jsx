@@ -16,7 +16,7 @@ function Tarefas() {
       }
 
       try {
-        const resposta = await fetch("http://localhost:4242/tarefas", {
+        const resposta = await fetch("https://pw-professor-36106-tpsi.onrender.com/tarefas", {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`
@@ -41,7 +41,7 @@ function Tarefas() {
   async function apagarTarefa(id) {
     const token = localStorage.getItem("token");
 
-    await fetch(`http://localhost:4242/tarefas/${id}`, {
+    await fetch(`https://pw-professor-36106-tpsi.onrender.com/tarefas/${id}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`
