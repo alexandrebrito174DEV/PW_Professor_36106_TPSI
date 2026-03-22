@@ -1,5 +1,3 @@
-// Configurações iniciais
-
 // Ficheiro .env
 require("dotenv").config({ path: "./.env" });
 
@@ -31,11 +29,11 @@ const PORT = process.env.SERVER_PORT || 4242;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // --------------------------------------------------------------------
-// Funções da autenticação
+// Autenticação - Funções
 // --------------------------------------------------------------------
 
-// Verifica se a chave de acesso foi enviada e se é válida
-function autenticarToken(req, res, next){
+// Verifica se a chave de acesso foi enviada e se foi valida
+function authenticateToken(req, res, next){
   const authHeader = req.headers.authorization;
 
   if (!authHeader){
@@ -52,18 +50,18 @@ function autenticarToken(req, res, next){
   const token = partes[1];
 
   try{
-    req.utilizador = jwt.verify(token, JWT_SECRET);
+    req.user = jwt.verify(token, JWT_SECRET);
     next();
   }
   catch (erro){
-    return res.status(401).json({ erro: "Chave de acesso inválida" });
+    return res.status(403).json({ erro: "Chave de acesso inválida" });
   }
 }
 
-// Rotas Gerais
+// Rotas 
 
 app.get("/", (req, res) => {
-  return res.status(200).json({ message: "Hello, my API works 🚀 v1.0.19" });
+  return res.status(200).json({ message: "Hello, my API works 🚀 v1.0.20" });
 });
 
 app.get("/users", (req, res) => {
@@ -86,10 +84,10 @@ app.delete("/users/:id", (req, res) => {
 // Autenticação
 // --------------------------------------------------------------------
 
-// Registo de utilizador
-app.post("/auth/register", async (req, res) => {
+// Registo - utilizador - Signup
+app.post("/auth/signup", async (req, res) => {
   try{
-    const nome = req.body.nome;
+    const nome = req.body.nome || req.body.name;
     const email = req.body.email;
     const password = req.body.password;
 
@@ -107,8 +105,7 @@ app.post("/auth/register", async (req, res) => {
       return res.status(409).json({ erro: "Já existe um utilizador com esse email" });
     }
 
-    const passwordEncriptada = await bcrypt.hash(password, 10); // bcrypt é a biblioteca usada para proteger a password
-    // hash é a versão codificada e protegida da password (o 10 indica o nível de segurança usado neste processo)
+    const passwordEncriptada = await bcrypt.hash(password, 10);
 
     const novoUtilizador = await prisma.utilizador.create({
       data: {
@@ -128,13 +125,13 @@ app.post("/auth/register", async (req, res) => {
     });
   }
   catch (erro){
-    console.error("ERRO POST /auth/register:", erro);
+    console.error("ERRO POST /auth/signup:", erro);
     return res.status(500).json({ erro: "Erro ao registar utilizador." });
   }
 });
 
-// Login do utilizador
-app.post("/auth/login", async (req, res) => {
+// Login - utilizador - Signin
+app.post("/auth/signin", async (req, res) => {
   try{
     const email = req.body.email;
     const password = req.body.password;
@@ -154,13 +151,11 @@ app.post("/auth/login", async (req, res) => {
     }
 
     const passwordCorreta = await bcrypt.compare(password, utilizador.password);
-    // bcrypt.compare compara a password inserida com a password protegida guardada
 
     if (!passwordCorreta){
       return res.status(401).json({ erro: "Credenciais inválidas" });
     }
 
-    // Cria a chave de acesso com os dados principais do utilizador
     const token = jwt.sign(
       {
         id: utilizador.id,
@@ -177,17 +172,17 @@ app.post("/auth/login", async (req, res) => {
     });
   }
   catch (erro){
-    console.error("ERRO POST /auth/login:", erro);
+    console.error("ERRO POST /auth/signin:", erro);
     return res.status(500).json({ erro: "Erro no login." });
   }
 });
 
 // Perfil autenticado
-app.get("/perfil", autenticarToken, async (req, res) => {
+app.get("/auth/profile", authenticateToken, async (req, res) => {
   try{
     const utilizador = await prisma.utilizador.findUnique({
       where: {
-        id: req.utilizador.id
+        id: req.user.id
       },
       select: {
         id: true,
@@ -203,7 +198,7 @@ app.get("/perfil", autenticarToken, async (req, res) => {
     return res.status(200).json(utilizador);
   }
   catch (erro){
-    console.error("ERRO GET /perfil:", erro);
+    console.error("ERRO GET /auth/profile:", erro);
     return res.status(500).json({ erro: "Erro ao obter perfil." });
   }
 });
@@ -212,7 +207,7 @@ app.get("/perfil", autenticarToken, async (req, res) => {
 // API de filmes
 // --------------------------------------------------------------------
 
-// Array - filmes
+// Array 
 let filmes = [
   { id: 1, titulo: "Inception", ano: 2010 },
   { id: 2, titulo: "Interstellar", ano: 2014 }
@@ -297,7 +292,7 @@ app.delete("/filmes/:id", (req, res) => {
     return res.status(404).json({ erro: "Filme não encontrado" });
   }
 
-  filmes.splice(indice, 1); // splice - remove elementos do array (a partir da posição encontrada)
+  filmes.splice(indice, 1);
 
   return res.status(200).json({ mensagem: "Filme removido" });
 });
@@ -307,7 +302,7 @@ app.delete("/filmes/:id", (req, res) => {
 // --------------------------------------------------------------------
 
 // Prioridades
-const PRIORIDADES = ["baixa", "média", "alta"];
+const PRIORIDADES = ["baixa", "media", "alta"];
 
 // Verifica se a prioridade inserida existe
 function prioridadeValida(prioridade){
@@ -322,8 +317,8 @@ function prioridadeValida(prioridade){
   return false;
 }
 
-// Converte o id recebido para número
-function parseIdTarefa(param){
+
+function parseIdTarefa(param){ 
   const id_tarefa = parseInt(param);
 
   if (isNaN(id_tarefa)){
@@ -333,34 +328,27 @@ function parseIdTarefa(param){
   return id_tarefa;
 }
 
-app.get("/tarefas", autenticarToken, async (req, res) => {
-
-  // async - indica que esta rota vai usar operações com a base de dados (tem de aguardar pela receção dos dados)
-
-  try{// try - executa o código normalmente se ocorrer erro o programa não crasha
-
+app.get("/tarefas", authenticateToken, async (req, res) => {
+  try{
     const tarefas = await prisma.tarefa.findMany({
       where: {
-        utilizadorId: req.utilizador.id
+        utilizadorId: req.user.id
       }
     });
 
     return res.status(200).json(tarefas);
   }
   catch (erro){
-    // o catch trata do erro se for no try
-    // mostra o erro no servidor e devolve resposta desse erro
-
     console.error("ERRO GET /tarefas:", erro);
     return res.status(500).json({ erro: "Erro ao listar tarefas." });
   }
 });
 
-app.get("/tarefas/statistics", autenticarToken, async (req, res) => {
+app.get("/tarefas/statistics", authenticateToken, async (req, res) => {
   try{
     const tarefas = await prisma.tarefa.findMany({
       where: {
-        utilizadorId: req.utilizador.id
+        utilizadorId: req.user.id
       }
     });
 
@@ -379,11 +367,11 @@ app.get("/tarefas/statistics", autenticarToken, async (req, res) => {
   }
   catch (erro){
     console.error("ERRO GET /tarefas/statistics:", erro);
-    return res.status(500).json({ erro: "Erro ao calcular estatísticas." });
+    return res.status(500).json({ erro: "Erro no cálculo de estatísticas." });
   }
 });
 
-app.get("/tarefas/:id", autenticarToken, async (req, res) => {
+app.get("/tarefas/:id", authenticateToken, async (req, res) => {
   try{
     const id_tarefa = parseIdTarefa(req.params.id);
 
@@ -394,7 +382,7 @@ app.get("/tarefas/:id", autenticarToken, async (req, res) => {
     const tarefa = await prisma.tarefa.findFirst({
       where: {
         id: id_tarefa,
-        utilizadorId: req.utilizador.id
+        utilizadorId: req.user.id
       }
     });
 
@@ -410,7 +398,7 @@ app.get("/tarefas/:id", autenticarToken, async (req, res) => {
   }
 });
 
-app.post("/tarefas", autenticarToken, async (req, res) => {
+app.post("/tarefas", authenticateToken, async (req, res) => {
   try{
     const titulo = req.body.titulo;
     const prioridade = req.body.prioridade;
@@ -428,7 +416,7 @@ app.post("/tarefas", autenticarToken, async (req, res) => {
         titulo: titulo,
         concluida: false,
         prioridade: prioridade,
-        utilizadorId: req.utilizador.id
+        utilizadorId: req.user.id
       }
     });
 
@@ -440,7 +428,7 @@ app.post("/tarefas", autenticarToken, async (req, res) => {
   }
 });
 
-app.put("/tarefas/:id", autenticarToken, async (req, res) => {
+app.put("/tarefas/:id", authenticateToken, async (req, res) => {
   try{
     const id_tarefa = parseIdTarefa(req.params.id);
 
@@ -451,7 +439,7 @@ app.put("/tarefas/:id", autenticarToken, async (req, res) => {
     const tarefa = await prisma.tarefa.findFirst({
       where: {
         id: id_tarefa,
-        utilizadorId: req.utilizador.id
+        utilizadorId: req.user.id
       }
     });
 
@@ -475,7 +463,7 @@ app.put("/tarefas/:id", autenticarToken, async (req, res) => {
 
     if (concluida !== undefined){
       if (concluida !== true && concluida !== false){
-        return res.status(400).json({ erro: "Para estar concluída temos de colocar true ou false" });
+        return res.status(400).json({ erro: "Para estar concluída temos de indicar: true / false" });
       }
 
       dadosAtualizados.concluida = concluida;
@@ -490,13 +478,9 @@ app.put("/tarefas/:id", autenticarToken, async (req, res) => {
     }
 
     const tarefaAtualizada = await prisma.tarefa.update({
-
-      // update - atualiza os dados do registo
-
       where: {
         id: id_tarefa
       },
-
       data: dadosAtualizados
     });
 
@@ -508,7 +492,7 @@ app.put("/tarefas/:id", autenticarToken, async (req, res) => {
   }
 });
 
-app.delete("/tarefas/:id", autenticarToken, async (req, res) => {
+app.delete("/tarefas/:id", authenticateToken, async (req, res) => {
   try{
     const id_tarefa = parseIdTarefa(req.params.id);
 
@@ -519,7 +503,7 @@ app.delete("/tarefas/:id", autenticarToken, async (req, res) => {
     const tarefa = await prisma.tarefa.findFirst({
       where: {
         id: id_tarefa,
-        utilizadorId: req.utilizador.id
+        utilizadorId: req.user.id
       }
     });
 
